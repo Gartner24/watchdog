@@ -1,6 +1,19 @@
 # watchdog
 
-> Linux server surveillance and threat response daemon — Operating Systems project, Universidad Tecnológica de Pereira.
+> Linux server surveillance and threat response daemon — Operating Systems project, Universidad Tecnologica de Pereira.
+
+---
+
+## Documentation
+
+Full module docs, infrastructure guides, and the operations runbook live in [`docs/`](docs/README.md).
+
+| Quick links | |
+|---|---|
+| [Architecture overview](docs/architecture/overview.md) | System topology and nodes |
+| [Data flow](docs/architecture/data-flow.md) | What happens during an attack |
+| [Deploy](docs/operations/deploy.md) | Provision a fresh server |
+| [Run demo](docs/operations/run-demo.md) | Live demo runbook |
 
 ---
 

@@ -1,0 +1,20 @@
+[Unit]
+Description=watchdog surveillance daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/sbin/watchdog
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=watchdog
+Environment=WD_POLL_MS=1000
+Environment=WD_LOG_PATH=/var/log/watchdog/events.log
+Environment=WD_LOAD_THRESHOLD=4.0
+Environment=WD_MEM_FREE_MB=200
+
+[Install]
+WantedBy=multi-user.target
