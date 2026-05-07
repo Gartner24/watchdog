@@ -39,13 +39,12 @@ At `--depth 6`, this spawns at most 2^6 = 64 concurrent processes — enough to 
 
 ## Kill switch
 
-phantom has a built-in self-termination after `--duration` seconds. For manual abort:
+phantom has a built-in self-termination after `--duration` seconds. For manual abort from another terminal on the server:
 
 ```sh
-# On the attacker VM
 kill -SIGTERM $(pgrep -x phantom)
 
-# On the server (emergency)
+# Emergency (also kills child processes)
 sudo pkill -9 phantom
 ```
 

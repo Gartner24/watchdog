@@ -10,6 +10,7 @@ typedef enum {
 
 typedef struct {
     int current;
+    int tick;
 } rr_scheduler_t;
 
 void rr_scheduler_init(rr_scheduler_t *s);

@@ -2,15 +2,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 
-static int depth_limit    = 6;
-static int sleep_ms       = 50;
-static int duration_s     = 30;
+static int depth_limit = 6;
+static int sleep_ms    = 50;
+static int duration_s  = 30;
+
+static volatile int stop = 0;
+
+static void handle_signal(int sig) {
+    (void)sig;
+    stop = 1;
+}
 
 static void bomb(int depth) {
+    if (stop) return;
     if (depth <= 0) {
-        usleep(duration_s * 1000000UL);
+        /* Leaf: sleep then exit, checking for abort every 100ms */
+        for (int i = 0; i < duration_s * 10 && !stop; i++)
+            usleep(100000);
         return;
     }
     usleep(sleep_ms * 1000UL);
@@ -35,6 +46,14 @@ static void usage(const char *prog) {
 }
 
 int main(int argc, char *argv[]) {
+    if (geteuid() == 0) {
+        fprintf(stderr, "[phantom] error: refusing to run as root\n");
+        return 1;
+    }
+
+    signal(SIGTERM, handle_signal);
+    signal(SIGINT,  handle_signal);
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--depth") == 0 && i + 1 < argc)
             depth_limit = atoi(argv[++i]);
@@ -46,9 +65,13 @@ int main(int argc, char *argv[]) {
             usage(argv[0]);
     }
 
-    printf("[phantom] launching fork bomb depth=%d sleep_ms=%d duration_s=%d\n",
-           depth_limit, sleep_ms, duration_s);
+    printf("[phantom] pid=%d depth=%d sleep_ms=%d duration_s=%d\n",
+           (int)getpid(), depth_limit, sleep_ms, duration_s);
+    printf("[phantom] launching fork bomb — kill -TERM %d to abort\n", (int)getpid());
+    fflush(stdout);
+
     bomb(depth_limit);
-    printf("[phantom] done\n");
+
+    printf("[phantom] terminating\n");
     return 0;
 }

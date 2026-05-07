@@ -2,28 +2,37 @@
 
 ## What it does
 
-Runs from an isolated virtual machine. Connects to the target server through the Tailscale tailnet and launches a controlled fork bomb, rapidly spawning child processes to stress the server's scheduler, CPU, and memory. watchdog must detect and respond.
+Built on the attacker VM, then copied and **run directly on the server** through an SSH session over the Tailscale tunnel. The fork bomb is local to wherever the binary runs — it must execute on the server for watchdog to observe and respond to it. The Tailscale tunnel is the channel that lets the operator SSH from the isolated VM to the server.
 
 ## Prerequisites
 
 1. The VM is joined to the same Tailscale tailnet as the server.
 2. The VM has no outbound route to the public internet (no NAT beyond tailnet).
 3. The server's `watchdog` daemon is running: `systemctl is-active watchdog`.
-4. Tailscale connectivity is confirmed: `tailscale ping <server-tailnet-ip>`.
+4. The phantom binary has been copied to the server: `scp phantom deploy@<server>:~/`.
+5. Run as a **non-root** user on the server (phantom refuses to run as root).
 
 ## Build
 
 ```sh
+# On the attacker VM (or locally)
 make -C src/phantom
 ```
 
 Produces `src/phantom/phantom` binary. Requires only `gcc`.
 
-## Run
+## Copy to server
 
 ```sh
-# From the attacker VM
-./phantom --target <server-tailnet-ip> --depth 6 --sleep-ms 50
+# From the attacker VM, over Tailscale
+scp src/phantom/phantom deploy@<server-tailnet-hostname>:~/phantom
+```
+
+## Run (on the server, via SSH from the VM)
+
+```sh
+ssh deploy@<server-tailnet-hostname>
+./phantom --depth 6 --sleep-ms 50 --duration 30
 ```
 
 | Flag | Default | Description |
