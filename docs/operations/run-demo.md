@@ -152,19 +152,18 @@ No more ALERT lines. Load decays below threshold. System back to normal.
 
 ## Full Tailscale demo (attacker VM scenario)
 
-The above runs phantom directly on the server via SSH. For the full demo with an isolated attacker VM:
-
-**On the attacker VM:**
+Run phantom on the server from the VM in a single command:
 
 ```bash
-# Copy the phantom binary to the server over the Tailscale tunnel
-scp src/phantom/phantom gartner@<server-tailscale-ip>:~/phantom
+ssh -p 2222 gartner@srv712582 /opt/apps/watchdog/src/phantom/phantom --depth 8 --sleep-ms 5 --duration 60
+```
 
-# SSH into the server from the VM
-ssh gartner@<server-tailscale-ip>
+This SSHs into the server over the Tailscale tunnel and executes phantom there. The fork bomb runs on the server where watchdog is watching — the VM is just the launch point.
 
-# Run phantom on the server (you are now inside the server)
-./phantom --depth 8 --sleep-ms 5 --duration 60
+To stop it early from the VM:
+
+```bash
+ssh -p 2222 gartner@srv712582 sudo pkill -9 -f phantom
 ```
 
 phantom runs locally on the server regardless — the Tailscale tunnel is the SSH channel. The fork bomb is always local to the machine watchdog monitors.
