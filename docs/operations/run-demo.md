@@ -14,10 +14,10 @@ End-to-end guide to run the watchdog + phantom demo. Based on verified runs agai
 
 ## Step 0 - Tune the load threshold (required for modern VPS hardware)
 
-Modern VPS hosts have multiple cores and low idle load. The default threshold of `4.0` will never trigger. Set it to `0.8` — above the server's idle baseline (~0.04-0.10) but below what phantom will produce.
+Modern VPS hosts have multiple cores and low idle load. The default threshold of `4.0` will never trigger. Set it to `0.4` — above the server's idle baseline (~0.04-0.10) but below what phantom will produce (~0.5-0.6).
 
 ```bash
-sudo sed -i 's/WD_LOAD_THRESHOLD=4.0/WD_LOAD_THRESHOLD=0.8/' /etc/systemd/system/watchdog.service
+sudo sed -i 's/WD_LOAD_THRESHOLD=4.0/WD_LOAD_THRESHOLD=0.4/' /etc/systemd/system/watchdog.service
 sudo systemctl daemon-reload
 sudo systemctl restart watchdog
 ```
@@ -26,7 +26,7 @@ Confirm it took effect:
 
 ```bash
 sudo journalctl -u watchdog -n 3
-# Should show: starting poll_ms=1000 load_threshold=0.80
+# Should show: starting poll_ms=1000 load_threshold=0.40
 ```
 
 You only need to do this once. The value persists across restarts.
@@ -96,7 +96,7 @@ Switch to Terminal 1 or 2. Within 5-15 seconds of launching phantom you will see
 
 **Phase 3 - threshold breach and kill:**
 ```
-[ALERT] [monitor] threshold exceeded load=0.40 threshold=0.80 breach_mask=0x1
+[ALERT] [monitor] threshold exceeded load=0.40 threshold=0.40 breach_mask=0x1
 [INFO ] [responder] processing alert breach_mask=0x1 suspect_pid=254267 load=0.40
 [WARN ] [responder] SIGKILL pid=254267 ticks=540 load=0.40
 ```
@@ -124,7 +124,7 @@ No more ALERT lines. Load decays below threshold. System back to normal.
 ## What each log field means
 
 ```
-[2026-05-21T06:25:03Z] [ALERT] [monitor] threshold exceeded load=0.40 threshold=0.80 mem_free_mb=4424 min=200 breach_mask=0x1
+[2026-05-21T06:25:03Z] [ALERT] [monitor] threshold exceeded load=0.40 threshold=0.40 mem_free_mb=4424 min=200 breach_mask=0x1
 ```
 
 | Field | Value | Meaning |
