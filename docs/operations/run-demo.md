@@ -14,10 +14,10 @@ End-to-end guide to run the watchdog + phantom demo. Based on verified runs agai
 
 ## Step 0 - Tune the load threshold (required for modern VPS hardware)
 
-Modern VPS hosts have multiple cores and low idle load. The default threshold of `4.0` will never trigger on a lightly loaded server. Lower it before the demo.
+Modern VPS hosts have multiple cores and low idle load. The default threshold of `4.0` will never trigger. Set it to `0.8` — above the server's idle baseline (~0.04-0.10) but below what phantom will produce.
 
 ```bash
-sudo sed -i 's/WD_LOAD_THRESHOLD=4.0/WD_LOAD_THRESHOLD=0.2/' /etc/systemd/system/watchdog.service
+sudo sed -i 's/WD_LOAD_THRESHOLD=4.0/WD_LOAD_THRESHOLD=0.8/' /etc/systemd/system/watchdog.service
 sudo systemctl daemon-reload
 sudo systemctl restart watchdog
 ```
@@ -26,7 +26,7 @@ Confirm it took effect:
 
 ```bash
 sudo journalctl -u watchdog -n 3
-# Should show: starting poll_ms=1000 load_threshold=0.20
+# Should show: starting poll_ms=1000 load_threshold=0.80
 ```
 
 You only need to do this once. The value persists across restarts.
@@ -64,17 +64,17 @@ This shows the same output written to disk. Both terminals should display identi
 phantom is a fork bomb. It runs **on the server** as a non-root user. It will be refused if run as root.
 
 ```bash
-./src/phantom/phantom --depth 8 --sleep-ms 5 --duration 60
+./src/phantom/phantom --depth 9 --sleep-ms 1 --duration 60
 ```
 
 Expected output:
 
 ```
-[phantom] pid=XXXXX depth=8 sleep_ms=5 duration_s=60
+[phantom] pid=XXXXX depth=9 sleep_ms=1 duration_s=60
 [phantom] launching fork bomb - kill -TERM XXXXX to abort
 ```
 
-phantom will now recursively fork up to 2^8 = 256 leaf processes sleeping for 60 seconds each. CPU usage spikes. Load average climbs.
+phantom will now recursively fork up to 2^9 = 512 leaf processes. CPU usage spikes hard. Load average climbs well above 0.8.
 
 ---
 
@@ -96,7 +96,7 @@ Switch to Terminal 1 or 2. Within 5-15 seconds of launching phantom you will see
 
 **Phase 3 - threshold breach and kill:**
 ```
-[ALERT] [monitor] threshold exceeded load=0.40 threshold=0.20 breach_mask=0x1
+[ALERT] [monitor] threshold exceeded load=0.40 threshold=0.80 breach_mask=0x1
 [INFO ] [responder] processing alert breach_mask=0x1 suspect_pid=254267 load=0.40
 [WARN ] [responder] SIGKILL pid=254267 ticks=540 load=0.40
 ```
@@ -124,7 +124,7 @@ No more ALERT lines. Load decays below threshold. System back to normal.
 ## What each log field means
 
 ```
-[2026-05-21T06:25:03Z] [ALERT] [monitor] threshold exceeded load=0.40 threshold=0.20 mem_free_mb=4424 min=200 breach_mask=0x1
+[2026-05-21T06:25:03Z] [ALERT] [monitor] threshold exceeded load=0.40 threshold=0.80 mem_free_mb=4424 min=200 breach_mask=0x1
 ```
 
 | Field | Value | Meaning |
@@ -152,10 +152,30 @@ No more ALERT lines. Load decays below threshold. System back to normal.
 
 ## Full Tailscale demo (attacker VM scenario)
 
+### Start the attacker VM
+
+From your local machine (Arch Linux):
+
+```bash
+sudo virsh net-start default   # start the virtual network (required after reboot)
+sudo virsh start phantom        # start the VM
+sudo virt-manager               # open the GUI console to see the VM display
+```
+
+Wait for the VM to boot, then log in. Confirm Tailscale is up inside the VM:
+
+```bash
+tailscale status
+```
+
+You should see the server listed as a peer. If not, run `sudo tailscale up` inside the VM.
+
+### Run the attack
+
 Run phantom on the server from the VM in a single command:
 
 ```bash
-ssh -p 2222 gartner@srv712582 /opt/apps/watchdog/src/phantom/phantom --depth 8 --sleep-ms 5 --duration 60
+ssh -p 2222 gartner@srv712582 /opt/apps/watchdog/src/phantom/phantom --depth 9 --sleep-ms 1 --duration 60
 ```
 
 This SSHs into the server over the Tailscale tunnel and executes phantom there. The fork bomb runs on the server where watchdog is watching — the VM is just the launch point.
@@ -194,7 +214,7 @@ The file contains the full before/during/after sequence with UTC timestamps.
 
 ```bash
 # If phantom is still running
-kill -TERM <phantom-pid>
+pkill -f phantom
 
 # Stop watchdog after the demo
 sudo systemctl stop watchdog
